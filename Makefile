@@ -1,8 +1,8 @@
 TARGET := elfparser
 INCLUDES_LIBS_HEADERS := -I/usr/local/include/ -I/usr/include/
 GCC := gcc
-DFLAGS := -g -O0 -fno-omit-frame-pointer -pipe -Wall
-LIBS := -lm
+DFLAGS := -g -O0 -fno-omit-frame-pointer -pipe -Wall -m32
+LIBS := -lm -m32
 
 SRCF= $(wildcard *.c)
 OBJF= $(SRCF:.c=.o)

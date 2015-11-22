@@ -59,8 +59,8 @@ static int elf_get_symval(Elf32_Sym *sym)
 
 static int elf_reloc(Elf32_Ehdr *ehdr, Elf32_Shdr *target, Elf32_Rel *rel)
 {
-	long addr = buff + target->sh_offset;
-	long *ref = (long *)(addr + rel->r_offset);
+	int addr = buff + target->sh_offset;
+	int *ref = (int *)(addr + rel->r_offset);
 	Elf32_Sym *sym;
 	int func;
 	int ret = 0;
@@ -83,6 +83,7 @@ static int elf_reloc(Elf32_Ehdr *ehdr, Elf32_Shdr *target, Elf32_Rel *rel)
 	p = rel->r_offset;
 	t = func & 0x1;
 
+	printf("\t- %s instruction\n", t ? "Thumb" : "ARM");
 	printf("\t- before reloc: %#x\n", *ref);
 
 	switch (ELF32_R_TYPE(rel->r_info)) {
