@@ -286,6 +286,8 @@ int main(int argc, char **argv)
 	if (ret < 0)
 		printf("[-] Failed to reloc sections\n");
 
+	ehdr->e_entry = 0x08000000;
+
 out:
 	munmap((caddr_t)buff, size);
 	close(fd);
