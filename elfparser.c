@@ -154,16 +154,80 @@ static int elf_reloc(Elf32_Ehdr *ehdr, Elf32_Shdr *target, Elf32_Rel *rel)
 	return ret;
 }
 
+static int elf_section_alloc(Elf32_Shdr *shdr)
+{
+	int i;
+	int ret = 0;
+	char *str;
+	void *mem;
+	Elf32_Shdr *section;
+
+	for (i = 0; i < ehdr->e_shnum; i++) {
+		section = elf_get_section(i);
+		str = buff + shdr->sh_offset + section->sh_name;
+		if (section->sh_type == SHT_NOBITS) {
+			printf("[!] %s\n", str);
+
+			if (!section->sh_size) {
+				printf("[-] Section empty\n");
+				continue;
+			}
+
+			if (section->sh_flags & SHF_ALLOC) {
+				mem = malloc(section->sh_size);
+				memset(mem, 0, section->sh_size);
+
+				section->sh_offset = (int)mem - (int)buff;
+				printf("Allocate %d bytes for section %s\n", section->sh_size, str);
+			}
+		}
+	}
+
+	return ret;
+}
+
+static int elf_section_reloc(Elf32_Shdr *shdr)
+{
+	int i, j;
+	int ret = 0;
+	char *str;
+	Elf32_Shdr *section;
+	Elf32_Shdr *target;
+	Elf32_Rel *rel;
+
+	printf("[+] dumping section needed relocation: \n");
+	for (i = 0; i < ehdr->e_shnum; i++) {
+		section = elf_get_section(i);
+		str = buff + shdr->sh_offset + section->sh_name;
+		if (section->sh_type == SHT_REL) {
+			printf("[!] %s\n", str);
+			for (j = 0; j < (section->sh_size / section->sh_entsize); j++) {
+				rel = (Elf32_Rel *)(buff + section->sh_offset + j * section->sh_entsize);
+				target = elf_get_section(section->sh_info);
+
+				debug_printf("\t- offset: %#x ", rel->r_offset);
+				debug_printf("info: %#x ", rel->r_info);
+				debug_printf("\t- applies to: %#x\n", section->sh_info);
+
+				ret = elf_reloc(ehdr, target, rel);
+				if (ret < 0) {
+					debug_printf("[-] Failed to reloc\n");
+				}
+			}
+		}
+	}
+
+	return ret;
+}
+
 int main(int argc, char **argv)
 {
 	int fd;
 	char *str;
 	Elf32_Shdr *shdr;
 	Elf32_Shdr *section;
-	Elf32_Shdr *target;
-	Elf32_Rel *rel;
 	struct stat sb;
-	int i, j;
+	int i;
 	int ret = 0;
 
 	if (argc < 2)
@@ -212,29 +276,17 @@ int main(int argc, char **argv)
 			strtab = section;
 	}
 
-	printf("[+] dumping section needed relocation: \n");
-	for (i = 0; i < ehdr->e_shnum; i++) {
-		section = elf_get_section(i);
-		str = buff + shdr->sh_offset + section->sh_name;
-		if (section->sh_type == SHT_REL) {
-			printf("[!] %s\n", str);
-			for (j = 0; j < (section->sh_size / section->sh_entsize); j++) {
-				rel = (Elf32_Rel *)(buff + section->sh_offset + j * section->sh_entsize);
-				target = elf_get_section(section->sh_info);
-
-				debug_printf("\t- offset: %#x ", rel->r_offset);
-				debug_printf("info: %#x ", rel->r_info);
-				debug_printf("\t- applies to: %#x\n", section->sh_info);
-
-				ret = elf_reloc(ehdr, target, rel);
-				if (ret < 0) {
-					debug_printf("[-] Failed to reloc\n");
-				}
-			}
-		}
+	ret = elf_section_alloc(shdr);
+	if (ret < 0) {
+		printf("[-] Failed to allocate sections\n");
+		goto out;
 	}
-	
 
+	ret = elf_section_reloc(shdr);
+	if (ret < 0)
+		printf("[-] Failed to reloc sections\n");
+
+out:
 	munmap((caddr_t)buff, size);
 	close(fd);
 
