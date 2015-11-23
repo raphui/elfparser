@@ -79,8 +79,8 @@ static int elf_reloc(Elf32_Ehdr *ehdr, Elf32_Shdr *target, Elf32_Rel *rel)
 	}
 
 	s = func;
-	a = 0;
-	p = rel->r_offset;
+	a = *ref;
+	p = ref;
 	t = func & 0x1;
 
 	printf("\t- %s instruction\n", t ? "Thumb" : "ARM");
@@ -180,7 +180,7 @@ int main(int argc, char **argv)
 			printf("[!] %s\n", str);
 			for (j = 0; j < (section->sh_size / section->sh_entsize); j++) {
 				rel = (Elf32_Rel *)(buff + section->sh_offset + j * section->sh_entsize);
-				target = (Elf32_Shdr *)(buff + ehdr->e_shoff + section->sh_info * section->sh_entsize);
+				target = (Elf32_Shdr *)(buff + ehdr->e_shoff + section->sh_info * section_size);
 
 				printf("\t- offset: %#x ", rel->r_offset);
 				printf("info: %#x ", rel->r_info);
