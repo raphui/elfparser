@@ -65,7 +65,7 @@ static int elf_get_symval(Elf32_Sym *sym)
 	int addr;
 	Elf32_Shdr *target;
 
-	if (sym->st_shndx == SHN_UNDEF) {
+	if (ELF32_ST_BIND(sym->st_info) & (STB_GLOBAL | STB_WEAK)) {
 		str = buff + strtab->sh_offset + sym->st_name;
 
 		debug_printf("sym_value: %#x ", sym->st_value);
@@ -79,16 +79,6 @@ static int elf_get_symval(Elf32_Sym *sym)
 				printf("[-] Undefined symbol: %s\n", str);
 				addr = -ENXIO;
 			}
-		}
-	} else if (sym->st_shndx == SHN_ABS) {
-		addr = sym->st_value;
-	} else {
-		debug_printf("%d\n", sym->st_shndx);
-		debug_printf("\t%d\n", ELF_ST_BIND(sym->st_info));
-
-		if (sym->st_shndx == SHN_HIRESERVE) {
-			target = elf_get_section(sym->st_shndx);
-			addr = buff + sym->st_value + target->sh_offset;
 		}
 	}
 
